@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Skip direct scanout for buffer formats the encoder does not support, such as XRGB2101010, which it otherwise reads as 8-bit BGRx.
+- Stop advertising ARGB2101010 and XRGB2101010 DMA-BUFs, so clients pick a format that qualifies for direct scanout.
 
 ## [v0.16.0] - 11-09-2026
 

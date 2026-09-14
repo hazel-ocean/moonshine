@@ -12,6 +12,7 @@ use smithay::reexports::wayland_server::Resource;
 use smithay::wayland::seat::WaylandFocus;
 
 use smithay::backend::allocator::dmabuf::{AsDmabuf, Dmabuf};
+use smithay::backend::allocator::format::FormatSet;
 use smithay::backend::allocator::gbm::GbmAllocator;
 use smithay::backend::allocator::{Allocator, Buffer, Fourcc, Modifier};
 use smithay::backend::renderer::damage::OutputDamageTracker;
@@ -590,7 +591,13 @@ impl MoonshineCompositor {
 		// Vulkan WSI and other GPU clients can create DMA-BUF-backed
 		// wl_buffer objects. NVIDIA's Vulkan WSI requires the feedback
 		// protocol to know which device to allocate on.
-		let dmabuf_formats = renderer.dmabuf_formats();
+		// Leave out 10-bit RGB layouts the encoder cannot import, so clients
+		// such as EGL pick a format that still qualifies for direct scanout.
+		let dmabuf_formats: FormatSet = renderer
+			.dmabuf_formats()
+			.into_iter()
+			.filter(|f| !matches!(f.code, Fourcc::Argb2101010 | Fourcc::Xrgb2101010))
+			.collect();
 
 		let render_node_dev = std::fs::metadata(render_node)
 			.map(|m| {
