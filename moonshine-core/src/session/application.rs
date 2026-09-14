@@ -47,6 +47,11 @@ pub struct ApplicationConfig {
 	/// Seconds to wait for the application to reach an active state after launch.
 	#[serde(default = "default_launch_timeout")]
 	pub launch_timeout_secs: u64,
+
+	/// Never draw Moonshine's cursor. Set this when the application draws its
+	/// own cursor, such as a nested compositor.
+	#[serde(default)]
+	pub hide_cursor: bool,
 }
 
 impl Default for ApplicationConfig {
@@ -60,6 +65,7 @@ impl Default for ApplicationConfig {
 			stdout: None,
 			stderr: None,
 			launch_timeout_secs: default_launch_timeout(),
+			hide_cursor: false,
 		}
 	}
 }
@@ -775,7 +781,28 @@ fn build_exec_array(entries: &[(String, Vec<String>, bool)]) -> Result<zvariant:
 
 #[cfg(test)]
 mod tests {
-	use super::split_standard_io;
+	use super::{ApplicationConfig, split_standard_io};
+
+	#[test]
+	fn test_hide_cursor_defaults_to_false() {
+		let config: ApplicationConfig = toml::from_str(
+			r#"title = "App"
+command = ["app"]"#,
+		)
+		.unwrap();
+		assert!(!config.hide_cursor);
+	}
+
+	#[test]
+	fn test_hide_cursor_parses_true() {
+		let config: ApplicationConfig = toml::from_str(
+			r#"title = "App"
+command = ["app"]
+hide_cursor = true"#,
+		)
+		.unwrap();
+		assert!(config.hide_cursor);
+	}
 
 	#[test]
 	fn test_standard_io_defaults_to_null() {

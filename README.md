@@ -192,6 +192,7 @@ command = ["/usr/bin/steam", "steam://open/bigpicture"]
 - `command`: The command to run. First entry is the executable, the rest are arguments.
 - `pre_command` (optional): Commands to run before launching the application. Each entry is a separate command, executed in order. Runs synchronously — the session waits for all to finish.
 - `post_command` (optional): Commands to run after the streaming session ends. Each entry is a separate command, executed in order. Runs synchronously — the server waits for all to finish.
+- `hide_cursor` (optional): Never draw Moonshine's cursor. Use it for applications that draw their own cursor, such as nested compositors. Defaults to `false`.
 
 Example:
 

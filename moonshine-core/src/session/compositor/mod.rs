@@ -122,6 +122,7 @@ pub(crate) struct CompositorContext {
 	pub height: u32,
 	pub refresh_rate: u32,
 	pub hdr: bool,
+	pub hide_cursor: bool,
 }
 
 /// Information sent from the compositor thread once XWayland is ready.
@@ -163,6 +164,7 @@ impl From<&SessionContext> for CompositorContext {
 			height: ctx.resolution.1,
 			refresh_rate: ctx.refresh_rate,
 			hdr: ctx.hdr,
+			hide_cursor: ctx.application.hide_cursor,
 		}
 	}
 }
@@ -416,6 +418,7 @@ fn run_compositor(
 		config.steam_mode,
 		config.virtual_connector_strategy,
 		config.keyboard.clone(),
+		context.hide_cursor,
 	);
 
 	// Insert the Wayland display as a calloop event source so client

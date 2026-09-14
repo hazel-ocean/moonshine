@@ -240,6 +240,7 @@ pub(crate) struct MoonshineCompositor {
 	pub cursor_position: Point<f64, Logical>,
 	pub cursor_status: CursorImageStatus,
 	pub pointer_element: PointerElement,
+	pub hide_cursor: bool,
 	pub last_pointer_activity: Option<std::time::Instant>,
 	pub pen_tablet_descriptor: TabletDescriptor,
 	pub active_pen_tool_kind: Option<u8>,
@@ -500,6 +501,7 @@ impl MoonshineCompositor {
 		steam_mode: bool,
 		virtual_connector_strategy: super::VirtualConnectorStrategy,
 		keyboard_config: KeyboardConfig,
+		hide_cursor: bool,
 	) -> (Self, Display<Self>) {
 		let compositor_state = CompositorState::new_v6::<Self>(&display_handle);
 		let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
@@ -605,6 +607,9 @@ impl MoonshineCompositor {
 		let cursor_buffer = cursor::load_default_cursor();
 		let mut pointer_element = PointerElement::default();
 		pointer_element.set_buffer(cursor_buffer);
+		if hide_cursor {
+			tracing::info!("Cursor drawing disabled by application config.");
+		}
 
 		// Pre-allocate GBM buffer pool for zero-alloc frame export.
 		let mut buffer_pool = Vec::with_capacity(BUFFER_POOL_SIZE);
@@ -659,6 +664,7 @@ impl MoonshineCompositor {
 				cursor_position: Point::from((width as f64 / 2.0, height as f64 / 2.0)),
 				cursor_status: CursorImageStatus::default_named(),
 				pointer_element,
+				hide_cursor,
 				last_pointer_activity: None,
 				pen_tablet_descriptor,
 				active_pen_tool_kind: None,
@@ -1083,7 +1089,8 @@ impl MoonshineCompositor {
 		let pointer_active = self
 			.last_pointer_activity
 			.is_some_and(|t| t.elapsed() <= std::time::Duration::from_secs(3));
-		let cursor_visible = pointer_active && !matches!(self.cursor_status, CursorImageStatus::Hidden);
+		let cursor_visible =
+			!self.hide_cursor && pointer_active && !matches!(self.cursor_status, CursorImageStatus::Hidden);
 		// While a Steam overlay is raised we must composite it together with the
 		// game (gamescope's `paint_all`), so direct scanout — which bypasses the
 		// space — is disabled.
@@ -1174,10 +1181,12 @@ impl MoonshineCompositor {
 			self.cursor_status = CursorImageStatus::default_named();
 		}
 
-		// Hide cursor if no pointer activity yet or inactive for 3 seconds.
-		let cursor_status = if self
-			.last_pointer_activity
-			.is_none_or(|t| t.elapsed() > std::time::Duration::from_secs(3))
+		// Hide cursor if configured to, if no pointer activity yet, or if
+		// inactive for 3 seconds.
+		let cursor_status = if self.hide_cursor
+			|| self
+				.last_pointer_activity
+				.is_none_or(|t| t.elapsed() > std::time::Duration::from_secs(3))
 		{
 			CursorImageStatus::Hidden
 		} else {
