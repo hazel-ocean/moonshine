@@ -14,6 +14,7 @@ mod pipeline;
 mod shard_batch;
 use gso_socket::UdpGsoSocket;
 use pipeline::VideoPipeline;
+pub(crate) use pipeline::is_supported_fourcc;
 use shard_batch::ShardBatch;
 
 /// Configuration for the video stream.

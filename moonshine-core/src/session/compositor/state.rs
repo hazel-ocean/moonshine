@@ -59,6 +59,7 @@ use smithay::xwayland::X11Wm;
 use super::KeyboardConfig;
 use crate::session::compositor::cursor::{self, PointerElement, PointerRenderElement};
 use crate::session::compositor::frame::{ExportedFrame, ExportedPlane, FrameColorSpace, HdrMetadata};
+use crate::session::stream::video::is_supported_fourcc;
 
 /// Number of pre-allocated GBM buffers. Three allows the compositor to
 /// always have a free buffer: at most two frames are queued in the
@@ -1492,6 +1493,14 @@ impl MoonshineCompositor {
 			return false;
 		}
 
+		if !is_supported_fourcc(client_dmabuf.format().code as u32) {
+			tracing::trace!(
+				"Direct scanout: encoder does not support {:?}",
+				client_dmabuf.format().code
+			);
+			return false;
+		}
+
 		// Assign a stable buffer index for the encoder's import cache, keyed
 		// by the wl_buffer's ObjectId (stable across re-attaches of the same
 		// buffer regardless of how the protocol handles fd duplication).
@@ -1632,6 +1641,14 @@ impl MoonshineCompositor {
 				client_dmabuf.height(),
 				self.width,
 				self.height,
+			);
+			return false;
+		}
+
+		if !is_supported_fourcc(client_dmabuf.format().code as u32) {
+			tracing::trace!(
+				"Override scanout: encoder does not support {:?}",
+				client_dmabuf.format().code
 			);
 			return false;
 		}

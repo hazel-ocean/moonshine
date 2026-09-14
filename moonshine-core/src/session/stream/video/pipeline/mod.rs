@@ -76,6 +76,18 @@ fn drm_fourcc_to_input(fourcc: u32) -> (InputFormat, vk::Format) {
 	}
 }
 
+/// Whether [`drm_fourcc_to_input`] maps a DRM fourcc to its real layout rather
+/// than the 8-bit BGRx fallback.
+pub(crate) fn is_supported_fourcc(fourcc: u32) -> bool {
+	matches!(
+		fourcc,
+		0x34325241 | 0x34325258 // ARGB/XRGB8888
+			| 0x34324241 | 0x34324258 // ABGR/XBGR8888
+			| 0x30334241 | 0x30334258 // ABGR/XBGR2101010
+			| 0x48344241 | 0x48344258 // ABGR/XBGR16161616F
+	)
+}
+
 /// Whether a pixelforge error indicates Vulkan device loss.
 ///
 /// Device loss is unrecoverable on the existing device: every subsequent GPU
@@ -1119,7 +1131,9 @@ impl VideoPipelineInner {
 
 #[cfg(test)]
 mod tests {
-	use super::{BT2408_SDR_REFERENCE_NITS, SCRGB_REFERENCE_WHITE_NITS, drm_fourcc_to_input, is_device_lost};
+	use super::{
+		BT2408_SDR_REFERENCE_NITS, SCRGB_REFERENCE_WHITE_NITS, drm_fourcc_to_input, is_device_lost, is_supported_fourcc,
+	};
 	use ash::vk;
 	use pixelforge::{InputFormat, PixelForgeError};
 
@@ -1173,6 +1187,26 @@ mod tests {
 		let (fmt, vk) = drm_fourcc_to_input(0xDEADBEEF);
 		assert_eq!(fmt, InputFormat::BGRx);
 		assert_eq!(vk, vk::Format::B8G8R8A8_UNORM);
+	}
+
+	#[test]
+	fn supported_fourccs_skip_the_bgrx_fallback() {
+		for fourcc in [
+			ABGR8888,
+			XBGR8888,
+			ABGR2101010,
+			XBGR2101010,
+			ABGR16161616F,
+			XBGR16161616F,
+		] {
+			assert!(is_supported_fourcc(fourcc), "{fourcc:#x}");
+			assert_ne!(drm_fourcc_to_input(fourcc).0, InputFormat::BGRx, "{fourcc:#x}");
+		}
+	}
+
+	#[test]
+	fn xrgb2101010_is_unsupported() {
+		assert!(!is_supported_fourcc(0x30335258));
 	}
 
 	#[test]
