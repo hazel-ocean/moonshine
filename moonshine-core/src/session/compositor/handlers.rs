@@ -907,48 +907,59 @@ impl MoonshineCompositor {
 		use super::VirtualConnectorStrategy;
 
 		let steam_controlled = self.e_strategy() == VirtualConnectorStrategy::SteamControlled;
-		let mut candidates = Vec::new();
-		for window in windows {
-			let Some(meta) = self.window_metadata.get(window) else {
-				continue;
-			};
+		let collect = |steam_only: bool| -> Vec<Window> {
+			let mut candidates = Vec::new();
+			for window in windows {
+				let Some(meta) = self.window_metadata.get(window) else {
+					continue;
+				};
 
-			// Always skip system tray icons, overlays, and external overlays.
-			if meta.flags.intersects(
-				WindowFlags::OVERLAY
-					| WindowFlags::NOTIFICATION
-					| WindowFlags::EXTERNAL_OVERLAY
-					| WindowFlags::SYS_TRAY_ICON,
-			) {
-				continue;
-			}
+				// Always skip system tray icons, overlays, and external overlays.
+				if meta.flags.intersects(
+					WindowFlags::OVERLAY
+						| WindowFlags::NOTIFICATION
+						| WindowFlags::EXTERNAL_OVERLAY
+						| WindowFlags::SYS_TRAY_ICON,
+				) {
+					continue;
+				}
 
-			// Skip VR overlay targets (forwarded overlays are disabled).
-			if meta.flags.contains(WindowFlags::VR_OVERLAY_TARGET) {
-				continue;
-			}
+				// Skip VR overlay targets (forwarded overlays are disabled).
+				if meta.flags.contains(WindowFlags::VR_OVERLAY_TARGET) {
+					continue;
+				}
 
-			// Skip the streaming client video window.
-			if meta.flags.contains(WindowFlags::STREAMING_CLIENT_VIDEO) {
-				continue;
-			}
+				// Skip the streaming client video window.
+				if meta.flags.contains(WindowFlags::STREAMING_CLIENT_VIDEO) {
+					continue;
+				}
 
-			// Under Steam control only game, Steam UI, and streaming-client
-			// windows are focus candidates.
-			if steam_controlled
-				&& !(meta.has_game_id() || meta.is_steam() || meta.flags.contains(WindowFlags::STREAMING_CLIENT))
-			{
-				continue;
-			}
+				// Under Steam control only game, Steam UI, and streaming-client
+				// windows are focus candidates.
+				if steam_only
+					&& !(meta.has_game_id() || meta.is_steam() || meta.flags.contains(WindowFlags::STREAMING_CLIENT))
+				{
+					continue;
+				}
 
-			// A viewable InputOutput window with non-zero opacity (or the
-			// streaming client) is a candidate.
-			if meta.map_state_viewable
-				&& meta.class_input_output
-				&& (meta.opacity > 0 || meta.flags.contains(WindowFlags::STREAMING_CLIENT))
-			{
-				candidates.push(window.clone());
+				// A viewable InputOutput window with non-zero opacity (or the
+				// streaming client) is a candidate.
+				if meta.map_state_viewable
+					&& meta.class_input_output
+					&& (meta.opacity > 0 || meta.flags.contains(WindowFlags::STREAMING_CLIENT))
+				{
+					candidates.push(window.clone());
+				}
 			}
+			candidates
+		};
+
+		// Moonshine also launches applications that Steam never sees, such as a
+		// nested compositor. Without a Steam-related window, any window can take
+		// focus.
+		let mut candidates = collect(steam_controlled);
+		if steam_controlled && candidates.is_empty() {
+			candidates = collect(false);
 		}
 
 		// Highest priority first (`is_focus_priority_greater`, stable sort).
