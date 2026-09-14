@@ -48,6 +48,7 @@ use smithay::wayland::presentation::Refresh;
 use smithay::wayland::relative_pointer::RelativePointerManagerState;
 use smithay::wayland::selection::data_device::DataDeviceState;
 use smithay::wayland::shell::xdg::XdgShellState;
+use smithay::wayland::shell::xdg::decoration::XdgDecorationState;
 use smithay::wayland::shm::ShmState;
 use smithay::wayland::socket::ListeningSocketSource;
 use smithay::wayland::tablet_manager::TabletManagerState;
@@ -506,6 +507,7 @@ impl MoonshineCompositor {
 		let compositor_state = CompositorState::new_v6::<Self>(&display_handle);
 		let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
 		let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
+		XdgDecorationState::new::<Self>(&display_handle);
 		let mut seat_state = SeatState::new();
 		let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
 		let data_device_state = DataDeviceState::new::<Self>(&display_handle);

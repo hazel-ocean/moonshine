@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a per-application `hide_cursor` option for applications that draw their own cursor, such as nested compositors.
+- Support xdg-decoration and always request server-side mode, so clients that draw their own frame, such as winit windows, fill the output.
 
 ## [v0.16.0] - 11-09-2026
 

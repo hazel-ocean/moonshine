@@ -15,6 +15,7 @@ use smithay::input::pointer::{CursorImageStatus, MotionEvent, PointerHandle};
 use smithay::input::tablet::TabletSeatHandler;
 use smithay::input::{Seat, SeatHandler, SeatState};
 use smithay::output::Output;
+use smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode as DecorationMode;
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State as XdgToplevelState;
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::protocol::wl_buffer;
@@ -29,6 +30,7 @@ use smithay::wayland::output::OutputHandler;
 use smithay::wayland::pointer_constraints::{ConstraintRemove, PointerConstraintsHandler, with_pointer_constraint};
 use smithay::wayland::selection::SelectionHandler;
 use smithay::wayland::selection::data_device::{DataDeviceHandler, DataDeviceState, WaylandDndGrabHandler};
+use smithay::wayland::shell::xdg::decoration::XdgDecorationHandler;
 use smithay::wayland::shell::xdg::{PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler, XdgShellState};
 use smithay::wayland::shm::{ShmHandler, ShmState};
 use smithay::wayland::xdg_activation::{
@@ -2076,6 +2078,33 @@ impl XdgActivationHandler for MoonshineCompositor {
 		);
 		self.focus_state.set_requested_focus_surface(surface);
 		self.reevaluate_focus();
+	}
+}
+
+// -- XDG Decoration Handler --
+
+// Always server-side, and the server draws none. A client that draws its own
+// frame, such as a winit window, otherwise shrinks its content below the output.
+impl XdgDecorationHandler for MoonshineCompositor {
+	fn new_decoration(&mut self, toplevel: ToplevelSurface) {
+		set_server_side_decoration(&toplevel);
+	}
+
+	fn request_mode(&mut self, toplevel: ToplevelSurface, _mode: DecorationMode) {
+		set_server_side_decoration(&toplevel);
+	}
+
+	fn unset_mode(&mut self, toplevel: ToplevelSurface) {
+		set_server_side_decoration(&toplevel);
+	}
+}
+
+fn set_server_side_decoration(toplevel: &ToplevelSurface) {
+	toplevel.with_pending_state(|state| {
+		state.decoration_mode = Some(DecorationMode::ServerSide);
+	});
+	if toplevel.is_initial_configure_sent() {
+		toplevel.send_pending_configure();
 	}
 }
 
